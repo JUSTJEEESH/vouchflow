@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Video, Circle, Square, RotateCw, Send, ChevronLeft, CheckCircle, Loader2, AlertCircle, Check } from 'lucide-react';
+import { Video, Circle, Square, RotateCw, Send, ChevronLeft, CheckCircle, Loader2, AlertCircle, Check, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { uploadVideo, getVideoThumbnail } from '@/lib/cloudinary';
@@ -32,13 +32,14 @@ export default function RecordPage() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [coveredPrompts, setCoveredPrompts] = useState<Set<number>>(new Set());
+  const [cameraReady, setCameraReady] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Default prompts (used when campaign has no custom prompts)
+  // Default prompts
   const defaultPrompts = [
     "What was your biggest challenge before working with us?",
     "How did we help you overcome it?",
@@ -58,7 +59,6 @@ export default function RecordPage() {
   // Fetch campaign data on mount
   useEffect(() => {
     async function fetchCampaign() {
-      // Handle 'demo' campaign specially
       if (id === 'demo') {
         setCampaign({
           id: 'demo',
@@ -125,6 +125,11 @@ export default function RecordPage() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play();
+          setCameraReady(true);
+        };
       }
       setStage('recording');
     } catch {
@@ -173,7 +178,6 @@ export default function RecordPage() {
     mediaRecorder.start();
     setIsRecording(true);
     setRecordingTime(0);
-    // Mark first prompt as covered
     setCoveredPrompts(new Set([0]));
 
     timerRef.current = setInterval(() => {
@@ -207,12 +211,12 @@ export default function RecordPage() {
     setUploadProgress(0);
     setCoveredPrompts(new Set());
     setCurrentPrompt(0);
+    setCameraReady(false);
     startCamera();
   };
 
   const selectPrompt = (index: number) => {
     setCurrentPrompt(index);
-    // Mark as covered when selected
     setCoveredPrompts(prev => {
       const newSet = new Set(prev);
       newSet.add(index);
@@ -220,10 +224,19 @@ export default function RecordPage() {
     });
   };
 
+  const nextPrompt = () => {
+    const next = (currentPrompt + 1) % prompts.length;
+    selectPrompt(next);
+  };
+
+  const prevPrompt = () => {
+    const prev = currentPrompt === 0 ? prompts.length - 1 : currentPrompt - 1;
+    selectPrompt(prev);
+  };
+
   const submitVideo = async () => {
     if (!recordedBlob || !campaign) return;
 
-    // For demo campaign, just show success
     if (id === 'demo') {
       setStage('success');
       return;
@@ -233,15 +246,12 @@ export default function RecordPage() {
     setUploadProgress(0);
 
     try {
-      // Upload to Cloudinary
       const uploadResult = await uploadVideo(recordedBlob, (progress) => {
         setUploadProgress(progress.percentage);
       });
 
-      // Get thumbnail URL
       const thumbnailUrl = getVideoThumbnail(uploadResult.public_id);
 
-      // Save video record to database
       const response = await fetch('/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +271,7 @@ export default function RecordPage() {
     } catch (err) {
       console.error('Upload error:', err);
       setError('Failed to upload video. Please try again.');
-      setStage('review'); // Go back to review so they can retry
+      setStage('review');
     }
   };
 
@@ -307,243 +317,240 @@ export default function RecordPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: secondaryColor, color: secondaryTextColor }}>
-      {/* Header */}
-      <nav className="border-b backdrop-blur-sm" style={{ borderColor: `${secondaryTextColor}20`, backgroundColor: `${secondaryColor}cc` }}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-              <ChevronLeft className="w-5 h-5" />
-              {campaign?.logo_url ? (
-                <img src={campaign.logo_url} alt={campaign.company_name || ''} className="h-8" />
-              ) : (
-                <>
-                  <Video className="w-6 h-6" style={{ color: primaryColor }} />
-                  <span className="text-lg font-semibold">VouchFlow</span>
-                </>
-              )}
-            </Link>
-            <div className="text-sm" style={{ opacity: 0.7 }}>
-              {campaign?.company_name || campaign?.name || 'Campaign'}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: secondaryColor, color: secondaryTextColor }}>
+      {/* Compact Header */}
+      <nav className="flex-shrink-0 border-b" style={{ borderColor: `${secondaryTextColor}15` }}>
+        <div className="px-4 py-3 flex justify-between items-center">
+          <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+            <ChevronLeft className="w-5 h-5" />
+            {campaign?.logo_url ? (
+              <img src={campaign.logo_url} alt={campaign.company_name || ''} className="h-6" />
+            ) : (
+              <span className="font-semibold">{campaign?.company_name || 'VouchFlow'}</span>
+            )}
+          </Link>
+          {stage === 'recording' && isRecording && (
+            <div className="flex items-center space-x-2 bg-red-500 text-white px-3 py-1.5 rounded-full text-sm">
+              <Circle className="w-2 h-2 fill-white animate-pulse" />
+              <span className="font-medium">{formatTime(recordingTime)}</span>
             </div>
-          </div>
+          )}
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden">
         {/* Intro Stage */}
         {stage === 'intro' && (
-          <div className="text-center py-12">
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{ backgroundColor: `${primaryColor}20` }}
             >
-              <Video className="w-10 h-10" style={{ color: primaryColor }} />
+              <Video className="w-8 h-8" style={{ color: primaryColor }} />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-              Share Your Experience
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Share Your Experience</h1>
 
-            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ opacity: 0.7 }}>
-              {campaign?.company_name
-                ? `${campaign.company_name} would love to hear about your experience! Record a quick video testimonial answering a few simple questions.`
-                : "We'd love to hear about your experience! Record a quick video testimonial answering a few simple questions."}
+            <p className="text-sm mb-6 max-w-sm" style={{ opacity: 0.7 }}>
+              Record a quick video answering {prompts.length} simple questions
             </p>
 
-            <div className="rounded-2xl p-8 mb-8 max-w-2xl mx-auto" style={{ backgroundColor: `${secondaryTextColor}10` }}>
-              <h3 className="text-xl font-semibold mb-4">You'll be asked:</h3>
-              <div className="space-y-3 text-left">
-                {prompts.map((prompt, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{ backgroundColor: `${primaryColor}20` }}
-                    >
-                      <span className="text-sm font-medium" style={{ color: primaryColor }}>{index + 1}</span>
-                    </div>
-                    <p style={{ opacity: 0.9 }}>{prompt}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="w-full max-w-sm mb-6 rounded-xl p-4 text-left" style={{ backgroundColor: `${secondaryTextColor}08` }}>
+              {prompts.map((prompt, index) => (
+                <div key={index} className="flex items-start gap-2 py-2">
+                  <span
+                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium"
+                    style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="text-sm" style={{ opacity: 0.9 }}>{prompt}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="space-y-4">
-              <button
-                onClick={startCamera}
-                className="px-8 py-4 rounded-lg font-medium transition-all shadow-lg inline-flex items-center space-x-2 hover:opacity-90"
-                style={{
-                  backgroundColor: primaryColor,
-                  color: primaryTextColor,
-                  boxShadow: `0 10px 40px -10px ${primaryColor}80`
-                }}
-              >
-                <Video className="w-5 h-5" />
-                <span>Start Recording</span>
-              </button>
+            <button
+              onClick={startCamera}
+              className="px-8 py-4 rounded-xl font-medium transition-all shadow-lg inline-flex items-center space-x-2 hover:opacity-90"
+              style={{
+                backgroundColor: primaryColor,
+                color: primaryTextColor,
+                boxShadow: `0 10px 40px -10px ${primaryColor}80`
+              }}
+            >
+              <Video className="w-5 h-5" />
+              <span>Start Recording</span>
+            </button>
 
-              <p className="text-sm" style={{ opacity: 0.5 }}>
-                2 minutes max - Camera & microphone access required
-              </p>
-            </div>
+            <p className="text-xs mt-4" style={{ opacity: 0.5 }}>
+              Camera & microphone required • 2 min max
+            </p>
           </div>
         )}
 
-        {/* Recording Stage */}
+        {/* Recording Stage - Single Screen Layout */}
         {stage === 'recording' && (
-          <div className={`flex flex-col ${aspectRatio === 'landscape' ? 'lg:flex-row' : ''} gap-6`}>
-            {/* Questions Panel */}
-            <div className={`${aspectRatio === 'landscape' ? 'lg:w-80 lg:order-2' : 'order-1'}`}>
-              <div className="rounded-xl p-4" style={{ backgroundColor: `${secondaryTextColor}10` }}>
-                <p className="text-sm font-medium mb-3" style={{ opacity: 0.7 }}>
-                  Tap a question to focus on it:
-                </p>
-                <div className="space-y-2">
-                  {prompts.map((prompt, index) => (
-                    <button
-                      key={index}
-                      onClick={() => selectPrompt(index)}
-                      className="w-full text-left p-3 rounded-lg transition-all flex items-start gap-3 hover:opacity-80"
-                      style={{
-                        backgroundColor: currentPrompt === index ? `${primaryColor}20` : `${secondaryTextColor}05`,
-                        outline: currentPrompt === index ? `2px solid ${primaryColor}` : 'none',
-                        outlineOffset: '2px'
-                      }}
-                    >
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{
-                          backgroundColor: coveredPrompts.has(index) ? primaryColor : `${primaryColor}30`,
-                          color: coveredPrompts.has(index) ? primaryTextColor : primaryColor
-                        }}
-                      >
-                        {coveredPrompts.has(index) ? (
-                          <Check className="w-3.5 h-3.5" />
-                        ) : (
-                          <span className="text-xs font-medium">{index + 1}</span>
-                        )}
-                      </div>
-                      <span className={`text-sm ${currentPrompt === index ? 'font-medium' : ''}`} style={{
-                        opacity: currentPrompt === index ? 1 : 0.8
-                      }}>
-                        {prompt}
-                      </span>
-                    </button>
-                  ))}
+          <div className="flex-1 flex flex-col p-4 max-h-screen overflow-hidden">
+            {/* Current Question - Always Visible at Top */}
+            <div className="flex-shrink-0 mb-4">
+              <div
+                className="rounded-xl p-4"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className="text-xs font-medium px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: `${primaryTextColor}20`, color: primaryTextColor }}
+                  >
+                    Question {currentPrompt + 1} of {prompts.length}
+                  </span>
+                  {isRecording && (
+                    <span className="text-xs" style={{ color: primaryTextColor, opacity: 0.8 }}>
+                      {120 - recordingTime}s left
+                    </span>
+                  )}
                 </div>
+                <p className="font-medium" style={{ color: primaryTextColor }}>
+                  {prompts[currentPrompt]}
+                </p>
               </div>
             </div>
 
-            {/* Video Preview */}
-            <div className={`flex-1 ${aspectRatio === 'landscape' ? 'lg:order-1' : 'order-2'}`}>
-              <div className="flex flex-col items-center">
-                <div className={`relative rounded-2xl overflow-hidden w-full max-w-md mx-auto ${aspectConfig.cssClass}`} style={{ backgroundColor: '#000' }}>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
+            {/* Video Preview - Fills Available Space */}
+            <div className="flex-1 flex items-center justify-center min-h-0 mb-4">
+              <div
+                className={`relative rounded-2xl overflow-hidden ${aspectConfig.cssClass} max-h-full`}
+                style={{
+                  backgroundColor: '#000',
+                  width: aspectRatio === 'portrait' ? 'auto' : '100%',
+                  height: aspectRatio === 'portrait' ? '100%' : 'auto',
+                  maxWidth: aspectRatio === 'portrait' ? '300px' : '500px'
+                }}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
 
-                  {/* Countdown Overlay */}
-                  {countdown !== null && (
-                    <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
-                      <div className="text-8xl font-bold text-white animate-pulse">
-                        {countdown}
-                      </div>
+                {/* Camera loading indicator */}
+                {!cameraReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                    <Loader2 className="w-8 h-8 animate-spin text-white" />
+                  </div>
+                )}
+
+                {/* Countdown Overlay */}
+                {countdown !== null && (
+                  <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                    <div className="text-7xl font-bold text-white animate-pulse">
+                      {countdown}
                     </div>
-                  )}
-
-                  {/* Recording Indicator */}
-                  {isRecording && (
-                    <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-500 text-white px-3 py-2 rounded-full">
-                      <Circle className="w-3 h-3 fill-white animate-pulse" />
-                      <span className="text-sm font-medium">REC {formatTime(recordingTime)}</span>
-                    </div>
-                  )}
-
-                  {/* Time Remaining */}
-                  {isRecording && (
-                    <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full">
-                      <span className="text-sm font-medium">{120 - recordingTime}s left</span>
-                    </div>
-                  )}
-
-                  {/* Current Question Overlay */}
-                  {isRecording && (
-                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                      <p className="text-white text-center text-sm sm:text-base font-medium">
-                        {prompts[currentPrompt]}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Controls */}
-                <div className="flex justify-center mt-6">
-                  {!isRecording && countdown === null ? (
-                    <button
-                      onClick={startCountdown}
-                      className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
-                    >
-                      <Circle className="w-8 h-8 text-white" />
-                    </button>
-                  ) : isRecording ? (
-                    <button
-                      onClick={stopRecording}
-                      className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
-                    >
-                      <Square className="w-6 h-6 text-white" />
-                    </button>
-                  ) : null}
-                </div>
-
-                {!isRecording && countdown === null && (
-                  <p className="text-sm mt-4 text-center" style={{ opacity: 0.5 }}>
-                    Press the button to start recording
-                  </p>
+                  </div>
                 )}
               </div>
+            </div>
+
+            {/* Question Navigation Pills - Always Visible */}
+            <div className="flex-shrink-0 mb-4">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {prompts.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => selectPrompt(index)}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all font-medium text-sm"
+                    style={{
+                      backgroundColor: currentPrompt === index ? primaryColor : `${secondaryTextColor}15`,
+                      color: currentPrompt === index ? primaryTextColor : secondaryTextColor,
+                      opacity: currentPrompt === index ? 1 : 0.7,
+                      transform: currentPrompt === index ? 'scale(1.1)' : 'scale(1)'
+                    }}
+                  >
+                    {coveredPrompts.has(index) ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      index + 1
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="text-center text-xs mt-2" style={{ opacity: 0.5 }}>
+                Tap to switch questions
+              </p>
+            </div>
+
+            {/* Record/Stop Button */}
+            <div className="flex-shrink-0 flex justify-center pb-4">
+              {!isRecording && countdown === null ? (
+                <button
+                  onClick={startCountdown}
+                  disabled={!cameraReady}
+                  className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 disabled:opacity-50"
+                >
+                  <Circle className="w-8 h-8 text-white" />
+                </button>
+              ) : isRecording ? (
+                <button
+                  onClick={stopRecording}
+                  className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 animate-pulse"
+                >
+                  <Square className="w-6 h-6 text-white" />
+                </button>
+              ) : null}
             </div>
           </div>
         )}
 
         {/* Review Stage */}
         {stage === 'review' && videoUrl && (
-          <div className="max-w-2xl mx-auto space-y-6">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold mb-2">Review Your Video</h2>
-              <p style={{ opacity: 0.7 }}>Happy with it? Submit below. Want to retake?</p>
+          <div className="flex-1 flex flex-col p-4">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-bold mb-1">Review Your Video</h2>
+              <p className="text-sm" style={{ opacity: 0.7 }}>Happy with it? Submit below!</p>
             </div>
 
-            <div className={`rounded-2xl overflow-hidden mx-auto ${aspectConfig.cssClass}`} style={{ backgroundColor: '#000', maxWidth: aspectRatio === 'landscape' ? '100%' : '400px' }}>
-              <video
-                src={videoUrl}
-                controls
-                className="w-full h-full object-cover"
-              />
+            <div className="flex-1 flex items-center justify-center min-h-0 mb-4">
+              <div
+                className={`rounded-2xl overflow-hidden ${aspectConfig.cssClass} max-h-full`}
+                style={{
+                  backgroundColor: '#000',
+                  width: aspectRatio === 'portrait' ? 'auto' : '100%',
+                  height: aspectRatio === 'portrait' ? '100%' : 'auto',
+                  maxWidth: aspectRatio === 'portrait' ? '300px' : '500px'
+                }}
+              >
+                <video
+                  src={videoUrl}
+                  controls
+                  className="w-full h-full object-cover"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+              </div>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
-                <p className="text-red-400">{error}</p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-center mb-4">
+                <p className="text-red-400 text-sm">{error}</p>
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex-shrink-0 flex flex-col sm:flex-row gap-3 justify-center pb-4">
               <button
                 onClick={retakeVideo}
-                className="px-6 py-3 rounded-lg font-medium transition-all inline-flex items-center justify-center space-x-2"
-                style={{ backgroundColor: `${secondaryTextColor}20`, color: secondaryTextColor }}
+                className="px-6 py-3 rounded-xl font-medium transition-all inline-flex items-center justify-center space-x-2"
+                style={{ backgroundColor: `${secondaryTextColor}15`, color: secondaryTextColor }}
               >
                 <RotateCw className="w-5 h-5" />
-                <span>Retake Video</span>
+                <span>Retake</span>
               </button>
 
               <button
                 onClick={submitVideo}
-                className="px-6 py-3 rounded-lg font-medium transition-all shadow-lg inline-flex items-center justify-center space-x-2 hover:opacity-90"
+                className="px-6 py-3 rounded-xl font-medium transition-all shadow-lg inline-flex items-center justify-center space-x-2 hover:opacity-90"
                 style={{
                   backgroundColor: primaryColor,
                   color: primaryTextColor,
@@ -551,7 +558,7 @@ export default function RecordPage() {
                 }}
               >
                 <Send className="w-5 h-5" />
-                <span>Submit Testimonial</span>
+                <span>Submit</span>
               </button>
             </div>
           </div>
@@ -559,48 +566,41 @@ export default function RecordPage() {
 
         {/* Uploading Stage */}
         {stage === 'uploading' && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${primaryColor}20` }}>
-              <Loader2 className="w-10 h-10 animate-spin" style={{ color: primaryColor }} />
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ backgroundColor: `${primaryColor}20` }}>
+              <Loader2 className="w-8 h-8 animate-spin" style={{ color: primaryColor }} />
             </div>
 
-            <h2 className="text-2xl font-bold mb-4">Uploading Your Video</h2>
+            <h2 className="text-xl font-bold mb-4">Uploading...</h2>
 
-            <div className="max-w-md mx-auto mb-4">
-              <div className="rounded-full h-3 overflow-hidden" style={{ backgroundColor: `${secondaryTextColor}20` }}>
+            <div className="w-full max-w-xs mb-2">
+              <div className="rounded-full h-2 overflow-hidden" style={{ backgroundColor: `${secondaryTextColor}20` }}>
                 <div
                   className="h-full transition-all duration-300"
-                  style={{
-                    width: `${uploadProgress}%`,
-                    backgroundColor: primaryColor
-                  }}
+                  style={{ width: `${uploadProgress}%`, backgroundColor: primaryColor }}
                 />
               </div>
-              <p className="mt-2" style={{ opacity: 0.7 }}>{uploadProgress}% complete</p>
             </div>
+            <p className="text-sm" style={{ opacity: 0.7 }}>{uploadProgress}%</p>
 
-            <p className="text-sm" style={{ opacity: 0.5 }}>
-              Please don't close this page...
+            <p className="text-xs mt-4" style={{ opacity: 0.5 }}>
+              Please don't close this page
             </p>
           </div>
         )}
 
         {/* Success Stage */}
         {stage === 'success' && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-green-500" />
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-              Thank You!
-            </h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Thank You!</h1>
 
-            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ opacity: 0.7 }}>
-              Your video testimonial has been submitted successfully.
-              {campaign?.company_name
-                ? ` ${campaign.company_name} truly appreciates you taking the time to share your experience!`
-                : ' We truly appreciate you taking the time to share your experience!'}
+            <p className="text-sm mb-6 max-w-sm" style={{ opacity: 0.7 }}>
+              Your testimonial has been submitted successfully.
+              {campaign?.company_name && ` ${campaign.company_name} appreciates your time!`}
             </p>
 
             <Link
