@@ -1,0 +1,123 @@
+'use client';
+
+import { Video, CheckCircle, Zap, Shield } from 'lucide-react';
+import Link from 'next/link';
+
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Navigation */}
+      <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <Video className="w-7 h-7 text-indigo-600" />
+              <span className="text-xl font-semibold text-slate-900">VouchFlow</span>
+            </div>
+            <button className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+              Sign In
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-20 sm:py-32">
+          <div className="text-center">
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-indigo-50 rounded-full mb-8">
+              <Zap className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-medium text-indigo-600">Video Testimonials Made Simple</span>
+            </div>
+            
+            <h1 className="text-4xl sm:text-6xl font-bold text-slate-900 mb-6 leading-tight">
+              Collect Authentic
+              <br />
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Video Testimonials
+              </span>
+            </h1>
+            
+            <p className="text-lg sm:text-xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+              Send a magic link. Your clients record. You get powerful social proof.
+              <br className="hidden sm:block" />
+              No logins. No friction. Just results.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link 
+                href="/record/demo"
+                className="w-full sm:w-auto px-8 py-4 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/30 hover:shadow-xl hover:shadow-indigo-600/40 flex items-center justify-center space-x-2"
+              >
+                <Video className="w-5 h-5" />
+                <span>Record Testimonial</span>
+              </Link>
+              
+              <button className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-all border border-slate-200 shadow-sm">
+                See How It Works
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Features Grid */}
+        <div className="py-16 grid md:grid-cols-3 gap-8">
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+              <Zap className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">60-Second Setup</h3>
+            <p className="text-slate-600">
+              Create a campaign, copy your magic link, and start collecting testimonials instantly.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+              <CheckCircle className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">Zero Friction</h3>
+            <p className="text-slate-600">
+              Your clients click, record, and submit. No sign-ups. No downloads. No hassle.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+              <Shield className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">Built for Trust</h3>
+            <p className="text-slate-600">
+              Authentic video testimonials that convert browsers into buyers for your high-ticket offer.
+            </p>
+          </div>
+        </div>
+
+        {/* Social Proof */}
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-500 mb-4">Trusted by service providers who close deals</p>
+          <div className="flex justify-center items-center space-x-8 grayscale opacity-40">
+            <div className="text-2xl font-bold">Agency</div>
+            <div className="text-2xl font-bold">Coaching</div>
+            <div className="text-2xl font-bold">Consulting</div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white mt-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="flex flex-col sm:flex-row justify-between items-center">
+            <div className="flex items-center space-x-2 mb-4 sm:mb-0">
+              <Video className="w-6 h-6 text-indigo-600" />
+              <span className="text-lg font-semibold text-slate-900">VouchFlow</span>
+            </div>
+            <p className="text-sm text-slate-500">
+              © 2026 VouchFlow. Testimonials made simple.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
