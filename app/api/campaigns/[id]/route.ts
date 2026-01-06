@@ -12,7 +12,7 @@ export async function GET(
 
     const { data: campaign, error } = await supabase
       .from('campaigns')
-      .select('id, name, company_name, logo_url, brand_color, prompts')
+      .select('id, name, company_name, logo_url, brand_color, secondary_color, aspect_ratio, prompts')
       .eq('id', id)
       .single()
 
@@ -79,13 +79,15 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { name, company_name, logo_url, brand_color, prompts } = body
+    const { name, company_name, logo_url, brand_color, secondary_color, aspect_ratio, prompts } = body
 
     const updateData: Record<string, unknown> = {}
     if (name !== undefined) updateData.name = name
     if (company_name !== undefined) updateData.company_name = company_name
     if (logo_url !== undefined) updateData.logo_url = logo_url
     if (brand_color !== undefined) updateData.brand_color = brand_color
+    if (secondary_color !== undefined) updateData.secondary_color = secondary_color
+    if (aspect_ratio !== undefined) updateData.aspect_ratio = aspect_ratio
     if (prompts !== undefined) updateData.prompts = prompts
 
     const { data: campaign, error } = await supabase

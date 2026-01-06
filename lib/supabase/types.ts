@@ -6,6 +6,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Aspect ratio options for video recording
+export type AspectRatio = 'portrait' | 'square' | 'landscape'
+
 export interface Database {
   public: {
     Tables: {
@@ -17,6 +20,8 @@ export interface Database {
           company_name: string | null
           logo_url: string | null
           brand_color: string
+          secondary_color: string | null
+          aspect_ratio: AspectRatio
           prompts: string[]
           created_at: string
           updated_at: string
@@ -28,6 +33,8 @@ export interface Database {
           company_name?: string | null
           logo_url?: string | null
           brand_color?: string
+          secondary_color?: string | null
+          aspect_ratio?: AspectRatio
           prompts?: string[]
           created_at?: string
           updated_at?: string
@@ -39,6 +46,8 @@ export interface Database {
           company_name?: string | null
           logo_url?: string | null
           brand_color?: string
+          secondary_color?: string | null
+          aspect_ratio?: AspectRatio
           prompts?: string[]
           created_at?: string
           updated_at?: string

@@ -7,6 +7,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create video_status enum
 CREATE TYPE video_status AS ENUM ('processing', 'ready', 'failed');
 
+-- Create aspect_ratio enum
+CREATE TYPE aspect_ratio AS ENUM ('portrait', 'square', 'landscape');
+
 -- Campaigns table
 CREATE TABLE campaigns (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -15,6 +18,8 @@ CREATE TABLE campaigns (
   company_name TEXT,
   logo_url TEXT,
   brand_color TEXT DEFAULT '#4F46E5',
+  secondary_color TEXT DEFAULT '#1E293B',
+  aspect_ratio aspect_ratio DEFAULT 'portrait',
   prompts TEXT[] DEFAULT ARRAY[
     'What was your biggest challenge before working with us?',
     'How did we help you overcome it?',
