@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Video, ChevronLeft, Plus, Trash2, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { LogoUpload } from '@/components/LogoUpload';
 
 const PRESET_COLORS = [
   '#4F46E5', // Indigo
@@ -16,12 +18,13 @@ const PRESET_COLORS = [
   '#22C55E', // Green
   '#06B6D4', // Cyan
   '#3B82F6', // Blue
-  '#6366F1', // Indigo light
+  '#0F172A', // Slate 900 (dark)
 ];
 
 export default function NewCampaignPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -43,7 +46,7 @@ export default function NewCampaignPage() {
   async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      router.push('/login');
+      router.replace('/login');
     }
   }
 
@@ -88,44 +91,58 @@ export default function NewCampaignPage() {
       }
 
       const campaign = await response.json();
-      router.push(`/dashboard/${campaign.id}`);
+      setRedirecting(true);
+
+      // Use replace to avoid back button issues
+      window.location.href = `/dashboard/${campaign.id}`;
     } catch (error) {
       console.error('Error creating campaign:', error);
       alert('Failed to create campaign. Please try again.');
-    } finally {
       setLoading(false);
     }
   }
 
+  if (redirecting) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-slate-600 dark:text-slate-400">Creating your campaign...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
-      <nav className="bg-white border-b border-slate-200">
+      <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="flex items-center space-x-2 text-slate-600 hover:text-slate-900">
+            <Link href="/dashboard" className="flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
               <ChevronLeft className="w-5 h-5" />
               <Video className="w-7 h-7 text-indigo-600" />
-              <span className="text-xl font-bold text-slate-900">VouchFlow</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-white">VouchFlow</span>
             </Link>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Create New Campaign</h1>
-          <p className="mt-1 text-slate-600">Set up a new video testimonial campaign</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Create New Campaign</h1>
+          <p className="mt-1 text-slate-600 dark:text-slate-400">Set up a new video testimonial campaign</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Info */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-6">Basic Information</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Basic Information</h2>
 
             <div className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Campaign Name *
                 </label>
                 <input
@@ -135,12 +152,12 @@ export default function NewCampaignPage() {
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., Q1 Customer Testimonials"
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                 />
               </div>
 
               <div>
-                <label htmlFor="company_name" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="company_name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Company Name
                 </label>
                 <input
@@ -149,38 +166,28 @@ export default function NewCampaignPage() {
                   value={formData.company_name}
                   onChange={e => setFormData({ ...formData, company_name: e.target.value })}
                   placeholder="e.g., Acme Inc."
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                 />
-                <p className="mt-1 text-sm text-slate-500">This will be shown on the recording page</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">This will be shown on the recording page</p>
               </div>
 
-              <div>
-                <label htmlFor="logo_url" className="block text-sm font-medium text-slate-700 mb-2">
-                  Logo URL
-                </label>
-                <input
-                  type="url"
-                  id="logo_url"
-                  value={formData.logo_url}
-                  onChange={e => setFormData({ ...formData, logo_url: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                />
-                <p className="mt-1 text-sm text-slate-500">Optional: Your company logo for the recording page</p>
-              </div>
+              <LogoUpload
+                value={formData.logo_url}
+                onChange={(url) => setFormData({ ...formData, logo_url: url })}
+              />
             </div>
           </div>
 
           {/* Branding */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-6">Branding</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6">Branding</h2>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Brand Color
               </label>
 
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex flex-wrap gap-2">
                   {PRESET_COLORS.map(color => (
                     <button
@@ -189,7 +196,7 @@ export default function NewCampaignPage() {
                       onClick={() => setFormData({ ...formData, brand_color: color })}
                       className={`w-10 h-10 rounded-full border-2 transition-all ${
                         formData.brand_color === color
-                          ? 'border-slate-900 scale-110'
+                          ? 'border-indigo-500 scale-110 ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-800'
                           : 'border-transparent hover:scale-105'
                       }`}
                       style={{ backgroundColor: color }}
@@ -204,14 +211,14 @@ export default function NewCampaignPage() {
                     type="color"
                     value={formData.brand_color}
                     onChange={e => setFormData({ ...formData, brand_color: e.target.value })}
-                    className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer"
+                    className="w-10 h-10 rounded-lg border border-slate-300 dark:border-slate-600 cursor-pointer"
                   />
                 </div>
               </div>
 
               {/* Preview */}
-              <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-                <p className="text-sm text-slate-500 mb-2">Preview:</p>
+              <div className="mt-6 p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Preview:</p>
                 <button
                   type="button"
                   className="px-4 py-2 text-white rounded-lg font-medium"
@@ -224,17 +231,17 @@ export default function NewCampaignPage() {
           </div>
 
           {/* Prompts */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900">Recording Prompts</h2>
-                <p className="text-sm text-slate-500">Questions shown to guide the testimonial</p>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Recording Prompts</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Questions shown to guide the testimonial</p>
               </div>
               {formData.prompts.length < 5 && (
                 <button
                   type="button"
                   onClick={addPrompt}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add
@@ -259,13 +266,13 @@ export default function NewCampaignPage() {
                     value={prompt}
                     onChange={e => updatePrompt(index, e.target.value)}
                     placeholder={`Question ${index + 1}`}
-                    className="flex-1 px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    className="flex-1 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                   />
                   {formData.prompts.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removePrompt(index)}
-                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -279,7 +286,7 @@ export default function NewCampaignPage() {
           <div className="flex items-center justify-end space-x-4">
             <Link
               href="/dashboard"
-              className="px-6 py-3 text-slate-700 font-medium hover:text-slate-900 transition-colors"
+              className="px-6 py-3 text-slate-700 dark:text-slate-300 font-medium hover:text-slate-900 dark:hover:text-white transition-colors"
             >
               Cancel
             </Link>
