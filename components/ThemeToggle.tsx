@@ -4,7 +4,14 @@ import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/theme';
 
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, mounted } = useTheme();
+
+  // Render a placeholder with same dimensions to avoid layout shift
+  if (!mounted) {
+    return (
+      <div className="p-2 w-9 h-9" />
+    );
+  }
 
   return (
     <button
