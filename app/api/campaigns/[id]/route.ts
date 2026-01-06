@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 // GET /api/campaigns/[id] - Get a single campaign (public access for recording page)
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
 
     const { data: campaign, error } = await supabase
@@ -30,10 +30,10 @@ export async function GET(
 // DELETE /api/campaigns/[id] - Delete a campaign
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
 
     // Get the current user
@@ -65,10 +65,10 @@ export async function DELETE(
 // PATCH /api/campaigns/[id] - Update a campaign
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
 
     // Get the current user

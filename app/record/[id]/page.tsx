@@ -1,19 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect, use } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Video, Circle, Square, RotateCw, Send, ChevronLeft, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { uploadVideo, getVideoThumbnail } from '@/lib/cloudinary';
 import type { Campaign } from '@/lib/supabase/types';
 
-interface RecordPageProps {
-  params: Promise<{ id: string }>;
-}
-
 type Stage = 'loading' | 'intro' | 'recording' | 'review' | 'uploading' | 'success' | 'error';
 
-export default function RecordPage({ params }: RecordPageProps) {
-  const { id } = use(params);
+export default function RecordPage() {
+  const params = useParams();
+  const id = params.id as string;
 
   const [stage, setStage] = useState<Stage>('loading');
   const [campaign, setCampaign] = useState<Campaign | null>(null);
