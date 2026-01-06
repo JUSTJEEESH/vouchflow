@@ -14,9 +14,12 @@ export default function Home() {
               <Video className="w-7 h-7 text-indigo-600" />
               <span className="text-xl font-semibold text-slate-900">VouchFlow</span>
             </div>
-            <button className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
               Sign In
-            </button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -53,9 +56,12 @@ export default function Home() {
                 <span>Record Testimonial</span>
               </Link>
               
-              <button className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-all border border-slate-200 shadow-sm">
-                See How It Works
-              </button>
+              <Link
+                href="/login"
+                className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-all border border-slate-200 shadow-sm text-center"
+              >
+                Get Started Free
+              </Link>
             </div>
           </div>
         </div>
