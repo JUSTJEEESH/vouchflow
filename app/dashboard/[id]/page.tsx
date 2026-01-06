@@ -1,18 +1,16 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Video, ChevronLeft, Play, Download, Trash2, Loader2, Copy, ExternalLink, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { Campaign, Video as VideoType } from '@/lib/supabase/types';
 
-interface CampaignDetailPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function CampaignDetailPage({ params }: CampaignDetailPageProps) {
-  const { id } = use(params);
+export default function CampaignDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [videos, setVideos] = useState<VideoType[]>([]);

@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 // DELETE /api/videos/[id] - Delete a video
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const supabase = await createClient()
 
     // Get the current user
