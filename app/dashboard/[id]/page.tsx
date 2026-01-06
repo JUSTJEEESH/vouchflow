@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { Video, ChevronLeft, Play, Download, Trash2, Loader2, Copy, ExternalLink, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import type { Campaign, Video as VideoType } from '@/lib/supabase/types';
 
 interface CampaignDetailPageProps {
@@ -35,13 +36,11 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
   async function fetchCampaignAndVideos() {
     try {
-      // Fetch campaign details (protected, requires auth)
       const campaignRes = await fetch(`/api/campaigns/${id}`);
       if (!campaignRes.ok) throw new Error('Campaign not found');
       const campaignData = await campaignRes.json();
       setCampaign(campaignData);
 
-      // Fetch videos for this campaign
       const videosRes = await fetch(`/api/videos?campaign_id=${id}`);
       if (videosRes.ok) {
         const videosData = await videosRes.json();
@@ -94,7 +93,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
       </div>
     );
@@ -102,10 +101,10 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
   if (!campaign) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Campaign not found</h2>
-          <Link href="/dashboard" className="text-indigo-600 hover:text-indigo-700">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Campaign not found</h2>
+          <Link href="/dashboard" className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
             Back to Dashboard
           </Link>
         </div>
@@ -114,23 +113,24 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
-      <nav className="bg-white border-b border-slate-200">
+      <nav className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="flex items-center space-x-2 text-slate-600 hover:text-slate-900">
+            <Link href="/dashboard" className="flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
               <ChevronLeft className="w-5 h-5" />
               <Video className="w-7 h-7 text-indigo-600" />
-              <span className="text-xl font-bold text-slate-900">VouchFlow</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-white">VouchFlow</span>
             </Link>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Campaign Header */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center space-x-4">
               <div
@@ -144,9 +144,9 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                 )}
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">{campaign.name}</h1>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{campaign.name}</h1>
                 {campaign.company_name && (
-                  <p className="text-slate-600">{campaign.company_name}</p>
+                  <p className="text-slate-600 dark:text-slate-400">{campaign.company_name}</p>
                 )}
               </div>
             </div>
@@ -154,12 +154,10 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
             <div className="mt-4 sm:mt-0 flex items-center space-x-3">
               <button
                 onClick={copyRecordingLink}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 {copiedLink ? (
-                  <>
-                    <span className="text-green-600">Copied!</span>
-                  </>
+                  <span className="text-green-600 dark:text-green-400">Copied!</span>
                 ) : (
                   <>
                     <Copy className="w-4 h-4 mr-2" />
@@ -181,13 +179,13 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
           </div>
 
           {/* Prompts */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-3">Recording Prompts</h3>
+          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">Recording Prompts</h3>
             <div className="flex flex-wrap gap-2">
               {campaign.prompts?.map((prompt, index) => (
                 <span
                   key={index}
-                  className="px-3 py-1 bg-slate-100 text-slate-700 text-sm rounded-full"
+                  className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-full"
                 >
                   {index + 1}. {prompt}
                 </span>
@@ -198,18 +196,18 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
 
         {/* Videos Section */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
             Videos ({videos.length})
           </h2>
         </div>
 
         {videos.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-12 text-center">
+            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <Video className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No videos yet</h3>
-            <p className="text-slate-600 mb-6">Share your recording link to start collecting testimonials.</p>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">No videos yet</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">Share your recording link to start collecting testimonials.</p>
             <button
               onClick={copyRecordingLink}
               className="inline-flex items-center px-4 py-2 text-white rounded-lg font-medium transition-colors"
@@ -224,7 +222,7 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
             {videos.map((video) => (
               <div
                 key={video.id}
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-lg dark:hover:shadow-slate-900/50 transition-shadow"
               >
                 {/* Thumbnail */}
                 <div
@@ -262,11 +260,11 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-slate-600 dark:text-slate-400">
                         {formatDate(video.created_at)}
                       </p>
                       {video.submitter_name && (
-                        <p className="font-medium text-slate-900">{video.submitter_name}</p>
+                        <p className="font-medium text-slate-900 dark:text-white">{video.submitter_name}</p>
                       )}
                     </div>
 
@@ -274,14 +272,14 @@ export default function CampaignDetailPage({ params }: CampaignDetailPageProps) 
                       <a
                         href={video.video_url}
                         download
-                        className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="Download"
                       >
                         <Download className="w-5 h-5" />
                       </a>
                       <button
                         onClick={() => deleteVideo(video.id)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="w-5 h-5" />
