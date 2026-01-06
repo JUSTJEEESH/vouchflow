@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, company_name, logo_url, brand_color, prompts } = body
+    const { name, company_name, logo_url, brand_color, secondary_color, aspect_ratio, prompts } = body
 
     if (!name) {
       return NextResponse.json({ error: 'Campaign name is required' }, { status: 400 })
@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
         company_name: company_name || null,
         logo_url: logo_url || null,
         brand_color: brand_color || '#4F46E5',
+        secondary_color: secondary_color || '#1E293B',
+        aspect_ratio: aspect_ratio || 'portrait',
         prompts: prompts || [
           'What was your biggest challenge before working with us?',
           'How did we help you overcome it?',

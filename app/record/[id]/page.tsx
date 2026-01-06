@@ -1,13 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Video, Circle, Square, RotateCw, Send, ChevronLeft, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Video, Circle, Square, RotateCw, Send, ChevronLeft, CheckCircle, Loader2, AlertCircle, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { uploadVideo, getVideoThumbnail } from '@/lib/cloudinary';
-import type { Campaign } from '@/lib/supabase/types';
+import { getContrastTextColor } from '@/lib/colors';
+import type { Campaign, AspectRatio } from '@/lib/supabase/types';
 
 type Stage = 'loading' | 'intro' | 'recording' | 'review' | 'uploading' | 'success' | 'error';
+
+// Aspect ratio configurations
+const ASPECT_CONFIGS: Record<AspectRatio, { width: number; height: number; cssClass: string }> = {
+  portrait: { width: 720, height: 1280, cssClass: 'aspect-[9/16]' },
+  square: { width: 720, height: 720, cssClass: 'aspect-square' },
+  landscape: { width: 1280, height: 720, cssClass: 'aspect-video' },
+};
 
 export default function RecordPage() {
   const params = useParams();
@@ -23,6 +31,7 @@ export default function RecordPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [coveredPrompts, setCoveredPrompts] = useState<Set<number>>(new Set());
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -37,7 +46,14 @@ export default function RecordPage() {
   ];
 
   const prompts = campaign?.prompts?.length ? campaign.prompts : defaultPrompts;
-  const brandColor = campaign?.brand_color || '#4F46E5';
+  const primaryColor = campaign?.brand_color || '#4F46E5';
+  const secondaryColor = campaign?.secondary_color || '#1E293B';
+  const aspectRatio: AspectRatio = campaign?.aspect_ratio || 'portrait';
+  const aspectConfig = ASPECT_CONFIGS[aspectRatio];
+
+  // Get contrast text colors
+  const primaryTextColor = getContrastTextColor(primaryColor);
+  const secondaryTextColor = getContrastTextColor(secondaryColor);
 
   // Fetch campaign data on mount
   useEffect(() => {
@@ -51,6 +67,8 @@ export default function RecordPage() {
           company_name: 'VouchFlow Demo',
           logo_url: null,
           brand_color: '#4F46E5',
+          secondary_color: '#1E293B',
+          aspect_ratio: 'portrait',
           prompts: defaultPrompts,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -96,7 +114,11 @@ export default function RecordPage() {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: {
+          facingMode: 'user',
+          width: { ideal: aspectConfig.width },
+          height: { ideal: aspectConfig.height }
+        },
         audio: true
       });
 
@@ -151,12 +173,14 @@ export default function RecordPage() {
     mediaRecorder.start();
     setIsRecording(true);
     setRecordingTime(0);
+    // Mark first prompt as covered
+    setCoveredPrompts(new Set([0]));
 
     timerRef.current = setInterval(() => {
       setRecordingTime(prev => {
-        if (prev >= 60) {
+        if (prev >= 120) {
           stopRecording();
-          return 60;
+          return 120;
         }
         return prev + 1;
       });
@@ -181,7 +205,19 @@ export default function RecordPage() {
     setRecordedBlob(null);
     setRecordingTime(0);
     setUploadProgress(0);
+    setCoveredPrompts(new Set());
+    setCurrentPrompt(0);
     startCamera();
+  };
+
+  const selectPrompt = (index: number) => {
+    setCurrentPrompt(index);
+    // Mark as covered when selected
+    setCoveredPrompts(prev => {
+      const newSet = new Set(prev);
+      newSet.add(index);
+      return newSet;
+    });
   };
 
   const submitVideo = async () => {
@@ -238,10 +274,10 @@ export default function RecordPage() {
   // Loading state
   if (stage === 'loading') {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: secondaryColor }}>
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-500 mx-auto mb-4" />
-          <p className="text-slate-400">Loading campaign...</p>
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: primaryColor }} />
+          <p style={{ color: secondaryTextColor, opacity: 0.7 }}>Loading campaign...</p>
         </div>
       </div>
     );
@@ -250,16 +286,17 @@ export default function RecordPage() {
   // Error state
   if (stage === 'error') {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: secondaryColor }}>
         <div className="text-center max-w-md px-4">
           <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Something went wrong</h2>
-          <p className="text-slate-400 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: secondaryTextColor }}>Something went wrong</h2>
+          <p className="mb-6" style={{ color: secondaryTextColor, opacity: 0.7 }}>{error}</p>
           <Link
             href="/"
-            className="inline-flex items-center space-x-2 text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="inline-flex items-center space-x-2 transition-colors hover:opacity-80"
+            style={{ color: primaryColor }}
           >
             <ChevronLeft className="w-4 h-4" />
             <span>Back to Home</span>
@@ -270,62 +307,62 @@ export default function RecordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen" style={{ backgroundColor: secondaryColor, color: secondaryTextColor }}>
       {/* Header */}
-      <nav className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="border-b backdrop-blur-sm" style={{ borderColor: `${secondaryTextColor}20`, backgroundColor: `${secondaryColor}cc` }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
               <ChevronLeft className="w-5 h-5" />
               {campaign?.logo_url ? (
                 <img src={campaign.logo_url} alt={campaign.company_name || ''} className="h-8" />
               ) : (
                 <>
-                  <Video className="w-6 h-6" style={{ color: brandColor }} />
+                  <Video className="w-6 h-6" style={{ color: primaryColor }} />
                   <span className="text-lg font-semibold">VouchFlow</span>
                 </>
               )}
             </Link>
-            <div className="text-sm text-slate-400">
+            <div className="text-sm" style={{ opacity: 0.7 }}>
               {campaign?.company_name || campaign?.name || 'Campaign'}
             </div>
           </div>
         </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Intro Stage */}
         {stage === 'intro' && (
           <div className="text-center py-12">
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: `${brandColor}20` }}
+              style={{ backgroundColor: `${primaryColor}20` }}
             >
-              <Video className="w-10 h-10" style={{ color: brandColor }} />
+              <Video className="w-10 h-10" style={{ color: primaryColor }} />
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold mb-4">
               Share Your Experience
             </h1>
 
-            <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ opacity: 0.7 }}>
               {campaign?.company_name
                 ? `${campaign.company_name} would love to hear about your experience! Record a quick video testimonial answering a few simple questions.`
                 : "We'd love to hear about your experience! Record a quick video testimonial answering a few simple questions."}
             </p>
 
-            <div className="bg-slate-800 rounded-2xl p-8 mb-8 max-w-2xl mx-auto">
+            <div className="rounded-2xl p-8 mb-8 max-w-2xl mx-auto" style={{ backgroundColor: `${secondaryTextColor}10` }}>
               <h3 className="text-xl font-semibold mb-4">You'll be asked:</h3>
               <div className="space-y-3 text-left">
                 {prompts.map((prompt, index) => (
                   <div key={index} className="flex items-start space-x-3">
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{ backgroundColor: `${brandColor}20` }}
+                      style={{ backgroundColor: `${primaryColor}20` }}
                     >
-                      <span className="text-sm" style={{ color: brandColor }}>{index + 1}</span>
+                      <span className="text-sm font-medium" style={{ color: primaryColor }}>{index + 1}</span>
                     </div>
-                    <p className="text-slate-300">{prompt}</p>
+                    <p style={{ opacity: 0.9 }}>{prompt}</p>
                   </div>
                 ))}
               </div>
@@ -334,18 +371,19 @@ export default function RecordPage() {
             <div className="space-y-4">
               <button
                 onClick={startCamera}
-                className="px-8 py-4 text-white rounded-lg font-medium transition-all shadow-lg inline-flex items-center space-x-2"
+                className="px-8 py-4 rounded-lg font-medium transition-all shadow-lg inline-flex items-center space-x-2 hover:opacity-90"
                 style={{
-                  backgroundColor: brandColor,
-                  boxShadow: `0 10px 40px -10px ${brandColor}80`
+                  backgroundColor: primaryColor,
+                  color: primaryTextColor,
+                  boxShadow: `0 10px 40px -10px ${primaryColor}80`
                 }}
               >
                 <Video className="w-5 h-5" />
                 <span>Start Recording</span>
               </button>
 
-              <p className="text-sm text-slate-500">
-                60 seconds max - Camera & microphone access required
+              <p className="text-sm" style={{ opacity: 0.5 }}>
+                2 minutes max - Camera & microphone access required
               </p>
             </div>
           </div>
@@ -353,100 +391,133 @@ export default function RecordPage() {
 
         {/* Recording Stage */}
         {stage === 'recording' && (
-          <div className="space-y-6">
-            {/* Current Prompt */}
-            <div
-              className="rounded-lg p-6 text-center"
-              style={{ backgroundColor: brandColor }}
-            >
-              <p className="text-sm opacity-80 mb-2">Question {currentPrompt + 1} of {prompts.length}</p>
-              <h2 className="text-2xl font-semibold">{prompts[currentPrompt]}</h2>
+          <div className={`flex flex-col ${aspectRatio === 'landscape' ? 'lg:flex-row' : ''} gap-6`}>
+            {/* Questions Panel */}
+            <div className={`${aspectRatio === 'landscape' ? 'lg:w-80 lg:order-2' : 'order-1'}`}>
+              <div className="rounded-xl p-4" style={{ backgroundColor: `${secondaryTextColor}10` }}>
+                <p className="text-sm font-medium mb-3" style={{ opacity: 0.7 }}>
+                  Tap a question to focus on it:
+                </p>
+                <div className="space-y-2">
+                  {prompts.map((prompt, index) => (
+                    <button
+                      key={index}
+                      onClick={() => selectPrompt(index)}
+                      className="w-full text-left p-3 rounded-lg transition-all flex items-start gap-3 hover:opacity-80"
+                      style={{
+                        backgroundColor: currentPrompt === index ? `${primaryColor}20` : `${secondaryTextColor}05`,
+                        outline: currentPrompt === index ? `2px solid ${primaryColor}` : 'none',
+                        outlineOffset: '2px'
+                      }}
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{
+                          backgroundColor: coveredPrompts.has(index) ? primaryColor : `${primaryColor}30`,
+                          color: coveredPrompts.has(index) ? primaryTextColor : primaryColor
+                        }}
+                      >
+                        {coveredPrompts.has(index) ? (
+                          <Check className="w-3.5 h-3.5" />
+                        ) : (
+                          <span className="text-xs font-medium">{index + 1}</span>
+                        )}
+                      </div>
+                      <span className={`text-sm ${currentPrompt === index ? 'font-medium' : ''}`} style={{
+                        opacity: currentPrompt === index ? 1 : 0.8
+                      }}>
+                        {prompt}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Video Preview */}
-            <div className="relative bg-slate-800 rounded-2xl overflow-hidden aspect-video">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-
-              {/* Countdown Overlay */}
-              {countdown !== null && (
-                <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center">
-                  <div className="text-8xl font-bold text-white animate-pulse">
-                    {countdown}
-                  </div>
-                </div>
-              )}
-
-              {/* Recording Indicator */}
-              {isRecording && (
-                <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-500 px-3 py-2 rounded-full">
-                  <Circle className="w-3 h-3 fill-white animate-pulse" />
-                  <span className="text-sm font-medium">REC {formatTime(recordingTime)}</span>
-                </div>
-              )}
-
-              {/* Time Remaining */}
-              {isRecording && (
-                <div className="absolute top-4 right-4 bg-slate-900/80 px-3 py-2 rounded-full">
-                  <span className="text-sm font-medium">{60 - recordingTime}s left</span>
-                </div>
-              )}
-            </div>
-
-            {/* Prompt Navigation */}
-            {isRecording && prompts.length > 1 && (
-              <div className="flex justify-center space-x-2">
-                {prompts.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentPrompt(index)}
-                    className={`w-3 h-3 rounded-full transition-all ${
-                      index === currentPrompt
-                        ? 'scale-125'
-                        : 'opacity-50 hover:opacity-75'
-                    }`}
-                    style={{ backgroundColor: brandColor }}
-                    aria-label={`Go to question ${index + 1}`}
+            <div className={`flex-1 ${aspectRatio === 'landscape' ? 'lg:order-1' : 'order-2'}`}>
+              <div className="flex flex-col items-center">
+                <div className={`relative rounded-2xl overflow-hidden w-full max-w-md mx-auto ${aspectConfig.cssClass}`} style={{ backgroundColor: '#000' }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
                   />
-                ))}
-              </div>
-            )}
 
-            {/* Controls */}
-            <div className="flex justify-center space-x-4">
-              {!isRecording && countdown === null ? (
-                <button
-                  onClick={startCountdown}
-                  className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
-                >
-                  <Circle className="w-8 h-8" />
-                </button>
-              ) : isRecording ? (
-                <button
-                  onClick={stopRecording}
-                  className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
-                >
-                  <Square className="w-6 h-6" />
-                </button>
-              ) : null}
+                  {/* Countdown Overlay */}
+                  {countdown !== null && (
+                    <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                      <div className="text-8xl font-bold text-white animate-pulse">
+                        {countdown}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recording Indicator */}
+                  {isRecording && (
+                    <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-500 text-white px-3 py-2 rounded-full">
+                      <Circle className="w-3 h-3 fill-white animate-pulse" />
+                      <span className="text-sm font-medium">REC {formatTime(recordingTime)}</span>
+                    </div>
+                  )}
+
+                  {/* Time Remaining */}
+                  {isRecording && (
+                    <div className="absolute top-4 right-4 bg-black/70 text-white px-3 py-2 rounded-full">
+                      <span className="text-sm font-medium">{120 - recordingTime}s left</span>
+                    </div>
+                  )}
+
+                  {/* Current Question Overlay */}
+                  {isRecording && (
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                      <p className="text-white text-center text-sm sm:text-base font-medium">
+                        {prompts[currentPrompt]}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Controls */}
+                <div className="flex justify-center mt-6">
+                  {!isRecording && countdown === null ? (
+                    <button
+                      onClick={startCountdown}
+                      className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
+                    >
+                      <Circle className="w-8 h-8 text-white" />
+                    </button>
+                  ) : isRecording ? (
+                    <button
+                      onClick={stopRecording}
+                      className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30"
+                    >
+                      <Square className="w-6 h-6 text-white" />
+                    </button>
+                  ) : null}
+                </div>
+
+                {!isRecording && countdown === null && (
+                  <p className="text-sm mt-4 text-center" style={{ opacity: 0.5 }}>
+                    Press the button to start recording
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
 
         {/* Review Stage */}
         {stage === 'review' && videoUrl && (
-          <div className="space-y-6">
+          <div className="max-w-2xl mx-auto space-y-6">
             <div className="text-center">
               <h2 className="text-3xl font-bold mb-2">Review Your Video</h2>
-              <p className="text-slate-400">Happy with it? Submit below. Want to retake?</p>
+              <p style={{ opacity: 0.7 }}>Happy with it? Submit below. Want to retake?</p>
             </div>
 
-            <div className="bg-slate-800 rounded-2xl overflow-hidden aspect-video">
+            <div className={`rounded-2xl overflow-hidden mx-auto ${aspectConfig.cssClass}`} style={{ backgroundColor: '#000', maxWidth: aspectRatio === 'landscape' ? '100%' : '400px' }}>
               <video
                 src={videoUrl}
                 controls
@@ -463,7 +534,8 @@ export default function RecordPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={retakeVideo}
-                className="px-6 py-3 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-all inline-flex items-center justify-center space-x-2"
+                className="px-6 py-3 rounded-lg font-medium transition-all inline-flex items-center justify-center space-x-2"
+                style={{ backgroundColor: `${secondaryTextColor}20`, color: secondaryTextColor }}
               >
                 <RotateCw className="w-5 h-5" />
                 <span>Retake Video</span>
@@ -471,10 +543,11 @@ export default function RecordPage() {
 
               <button
                 onClick={submitVideo}
-                className="px-6 py-3 text-white rounded-lg font-medium transition-all shadow-lg inline-flex items-center justify-center space-x-2"
+                className="px-6 py-3 rounded-lg font-medium transition-all shadow-lg inline-flex items-center justify-center space-x-2 hover:opacity-90"
                 style={{
-                  backgroundColor: brandColor,
-                  boxShadow: `0 10px 40px -10px ${brandColor}80`
+                  backgroundColor: primaryColor,
+                  color: primaryTextColor,
+                  boxShadow: `0 10px 40px -10px ${primaryColor}80`
                 }}
               >
                 <Send className="w-5 h-5" />
@@ -487,26 +560,26 @@ export default function RecordPage() {
         {/* Uploading Stage */}
         {stage === 'uploading' && (
           <div className="text-center py-12">
-            <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${primaryColor}20` }}>
+              <Loader2 className="w-10 h-10 animate-spin" style={{ color: primaryColor }} />
             </div>
 
             <h2 className="text-2xl font-bold mb-4">Uploading Your Video</h2>
 
             <div className="max-w-md mx-auto mb-4">
-              <div className="bg-slate-800 rounded-full h-3 overflow-hidden">
+              <div className="rounded-full h-3 overflow-hidden" style={{ backgroundColor: `${secondaryTextColor}20` }}>
                 <div
                   className="h-full transition-all duration-300"
                   style={{
                     width: `${uploadProgress}%`,
-                    backgroundColor: brandColor
+                    backgroundColor: primaryColor
                   }}
                 />
               </div>
-              <p className="text-slate-400 mt-2">{uploadProgress}% complete</p>
+              <p className="mt-2" style={{ opacity: 0.7 }}>{uploadProgress}% complete</p>
             </div>
 
-            <p className="text-sm text-slate-500">
+            <p className="text-sm" style={{ opacity: 0.5 }}>
               Please don't close this page...
             </p>
           </div>
@@ -523,7 +596,7 @@ export default function RecordPage() {
               Thank You!
             </h1>
 
-            <p className="text-lg text-slate-400 mb-8 max-w-2xl mx-auto">
+            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ opacity: 0.7 }}>
               Your video testimonial has been submitted successfully.
               {campaign?.company_name
                 ? ` ${campaign.company_name} truly appreciates you taking the time to share your experience!`
@@ -532,8 +605,8 @@ export default function RecordPage() {
 
             <Link
               href="/"
-              className="inline-flex items-center space-x-2 transition-colors"
-              style={{ color: brandColor }}
+              className="inline-flex items-center space-x-2 transition-colors hover:opacity-80"
+              style={{ color: primaryColor }}
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Back to Home</span>
